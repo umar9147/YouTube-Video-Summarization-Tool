@@ -61,7 +61,6 @@ except Exception as e:
 
 def download_audio(youtube_url):
     try:
-        # Create a temporary directory that will be automatically cleaned up
         with tempfile.TemporaryDirectory() as output_folder:
             ydl_opts = {
                 'format': 'bestaudio/best',
@@ -70,12 +69,24 @@ def download_audio(youtube_url):
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                 }],
+                # Add these options to avoid the 403 error
+                'nocheckcertificate': True,
+                'quiet': False,
+                'no_warnings': False,
+                'extract_flat': False,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                }
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(youtube_url, download=True)
-                audio_path = os.path.join(output_folder, 'xyz.mp3')
-                return audio_path, info.get('title', 'Unknown Title')
+                try:
+                    info = ydl.extract_info(youtube_url, download=True)
+                    audio_path = os.path.join(output_folder, 'xyz.mp3')
+                    return audio_path, info.get('title', 'Unknown Title')
+                except yt_dlp.utils.DownloadError as e:
+                    st.error(f"Download Error: {str(e)}")
+                    return None, None
 
     except Exception as e:
         st.error(f"Error while downloading audio: {e}")
@@ -166,7 +177,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
