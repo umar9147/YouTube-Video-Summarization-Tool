@@ -69,7 +69,6 @@ def download_audio(youtube_url):
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                 }],
-                # Add these options to avoid the 403 error
                 'nocheckcertificate': True,
                 'quiet': False,
                 'no_warnings': False,
@@ -83,7 +82,15 @@ def download_audio(youtube_url):
                 try:
                     info = ydl.extract_info(youtube_url, download=True)
                     audio_path = os.path.join(output_folder, 'xyz.mp3')
-                    return audio_path, info.get('title', 'Unknown Title')
+                    # Verify file exists before returning
+                    if os.path.exists(audio_path):
+                        # Read the file into memory
+                        with open(audio_path, 'rb') as f:
+                            audio_data = f.read()
+                        return audio_data, info.get('title', 'Unknown Title')
+                    else:
+                        st.error("Audio file not found after download")
+                        return None, None
                 except yt_dlp.utils.DownloadError as e:
                     st.error(f"Download Error: {str(e)}")
                     return None, None
@@ -92,10 +99,19 @@ def download_audio(youtube_url):
         st.error(f"Error while downloading audio: {e}")
         return None, None
 
-def transcribe_audio(audio_path):
+def transcribe_audio(audio_data):
     try:
+        # Create a temporary file to write the audio data
+        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+            temp_file.write(audio_data)
+            temp_file_path = temp_file.name
+
         model = whisper.load_model("base")
-        result = model.transcribe(audio_path)
+        result = model.transcribe(temp_file_path)
+        
+        # Clean up the temporary file
+        os.unlink(temp_file_path)
+        
         del model  # Free up memory
         return result["text"]
         
@@ -125,14 +141,14 @@ def main():
             progress_bar = st.progress(0)
             
             with st.spinner("🎵 Downloading audio... 🎧 *beep boop*"):
-                audio_file_path, video_title = download_audio(youtube_url)
+                audio_data, video_title = download_audio(youtube_url)
                 progress_bar.progress(33)
 
-            if audio_file_path:
+            if audio_data:
                 st.markdown(f"📽️ **Now Processing**: _{video_title}_")
                 
                 with st.spinner("🎯 Converting speech to text... 🔊 ➡️ 📝"):
-                    transcribed_text = transcribe_audio(audio_file_path)
+                    transcribed_text = transcribe_audio(audio_data)
                     progress_bar.progress(66)
 
                 if transcribed_text:
