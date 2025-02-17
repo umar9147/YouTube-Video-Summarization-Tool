@@ -75,16 +75,19 @@ def download_audio(youtube_url):
                 'extract_flat': False,
                 'http_headers': {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                }
+                },
+                'cookiesfrombrowser': ('chrome',),
+                'extractor_retries': 3,
+                'ignoreerrors': True,
+                'geo_bypass': True,
+                'socket_timeout': 30,
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 try:
                     info = ydl.extract_info(youtube_url, download=True)
                     audio_path = os.path.join(output_folder, 'xyz.mp3')
-                    # Verify file exists before returning
                     if os.path.exists(audio_path):
-                        # Read the file into memory
                         with open(audio_path, 'rb') as f:
                             audio_data = f.read()
                         return audio_data, info.get('title', 'Unknown Title')
